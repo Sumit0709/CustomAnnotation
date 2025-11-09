@@ -3,59 +3,78 @@ package com.sumit.tcs.CustomAnnotation.util;
 import com.sumit.tcs.CustomAnnotation.annotations.MyAnnotation.ContentValue;
 import com.sumit.tcs.CustomAnnotation.model.Message;
 import com.sumit.tcs.CustomAnnotation.repository.MessageRepo;
+import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanDefinitionStoreException;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 @Component
-public class AnnotationConsumer {
+@Order(2)
+public class AnnotationConsumer implements CommandLineRunner{
 
     @Autowired
     MessageRepo messageRepository;
+
+    @Autowired
+    ApplicationContext context;
 
     private String getDetailedMessageFromDB(String key){
         Message message = messageRepository.findById(key).orElse(new Message(key, "Message not found for "+key));
         return message.getMessageValue();
     }
 
-    private String getDetailedMessage(String key){
-        if(key.equals("welcome")){
-            return "This is welcome message";
-        }
-        else if(key.equals("bye")){
-            return "This is bye message";
-        }
-        else{
-            return "Default message";
-        }
-    }
-
-
-    public void consumeContentValueAnnotation(Object obj) {
-        System.out.println("Consuming content value annotation in :: "+ obj.getClass());
-        Class<?> c = obj.getClass();
+    private void processClass(Class<?> c) {
 
         Field[] declaredFields = c.getDeclaredFields();
         for(Field f: declaredFields){
-//            System.out.println("Field :: "+ f.getName());
             if(f.isAnnotationPresent(ContentValue.class)){
-                f.setAccessible(true);
+                System.out.println("Found annotation in class " + c.getSimpleName());
                 String key = f.getAnnotation(ContentValue.class).value();
-//                System.out.println("value = "+ key);
                 try {
+                    Object obj = context.getBean(c);
+                    f.setAccessible(true);
                     f.set(obj, getDetailedMessageFromDB(key));
-                } catch (IllegalAccessException e) {
-                    System.out.println("Invalid request :: IllegalAccessException - " + e.getMessage());
+                }
+                catch (NoSuchBeanDefinitionException noSuchBeanDefinitionException){
+                    System.out.println("No Such bean for :: " + c.getName());
+                    System.out.println(noSuchBeanDefinitionException.getMessage());
+                }
+                catch (BeanDefinitionStoreException beanDefinitionStoreException){
+                    System.out.println("Bean isn't a prototype for :: " + c.getName());
+                    System.out.println(beanDefinitionStoreException.getMessage());
+                }
+                catch (BeansException beansException){
+                    System.out.println("bean could not be created for :: "+ c.getName());
+                    System.out.println(beansException.getMessage());
+                }
+                catch (Exception e) {
+                    System.out.println("Exception while assigning value to custom annotation field - " + e.getMessage());
                 }
             }
-//            System.out.println();
         }
+    }
 
-//        System.out.println(" ************************* ");
+    @Override
+    public void run(String... args) throws Exception {
+        try{
+            for(String basePackage: AutoConfigurationPackages.get(context.getAutowireCapableBeanFactory())){
+                Reflections reflections = new Reflections(basePackage, new SubTypesScanner(false));
+                reflections.getSubTypesOf(Object.class)
+                        .forEach(this::processClass);
+            }
 
+        }
+        catch (Exception e){
+            System.out.println("Exception while scanning package for classes :: "+ e.getMessage());
+        }
     }
 }

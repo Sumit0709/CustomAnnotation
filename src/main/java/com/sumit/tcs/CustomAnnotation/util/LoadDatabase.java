@@ -4,12 +4,14 @@ import com.sumit.tcs.CustomAnnotation.model.Message;
 import com.sumit.tcs.CustomAnnotation.repository.MessageRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
+@Order(1)
 public class LoadDatabase implements CommandLineRunner {
 
     @Autowired
@@ -23,7 +25,6 @@ public class LoadDatabase implements CommandLineRunner {
         messages.put("bye", "Thank you for vising! come again.");
 
         messages.forEach((String key, String value) -> {
-//            System.out.println(key + " -> "+ value);
             messageRepository.save(new Message(key, value));
         });
     }
