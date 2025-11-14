@@ -4,6 +4,8 @@ import com.sumit.tcs.CustomAnnotation.model.Message;
 import com.sumit.tcs.CustomAnnotation.repository.MessageRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -11,14 +13,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component
-@Order(1)
-public class LoadDatabase implements CommandLineRunner {
+public class LoadDatabase {
 
     @Autowired
     MessageRepo messageRepository;
 
-    @Override
-    public void run(String... args) throws Exception {
+    @EventListener
+    @Order(1)
+    public void processor(ContextRefreshedEvent cre){
         System.out.println("Loading data in database.");
         Map<String, String> messages = new HashMap<>();
         messages.put("welcome", "Hello there, welcome to my java Spring Boot project.");

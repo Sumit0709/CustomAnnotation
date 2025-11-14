@@ -12,14 +12,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
 
 @Component
-@Order(2)
-public class AnnotationConsumer implements CommandLineRunner{
+public class AnnotationConsumer{
 
     @Autowired
     MessageRepo messageRepository;
@@ -63,8 +65,10 @@ public class AnnotationConsumer implements CommandLineRunner{
         }
     }
 
-    @Override
-    public void run(String... args) throws Exception {
+
+    @EventListener
+    @Order(2)
+    public void processor(ContextRefreshedEvent cre){
         try{
             for(String basePackage: AutoConfigurationPackages.get(context.getAutowireCapableBeanFactory())){
                 Reflections reflections = new Reflections(basePackage, new SubTypesScanner(false));
@@ -77,4 +81,20 @@ public class AnnotationConsumer implements CommandLineRunner{
             System.out.println("Exception while scanning package for classes :: "+ e.getMessage());
         }
     }
+
+
+//    @Override
+//    public void run(String... args) throws Exception {
+//        try{
+//            for(String basePackage: AutoConfigurationPackages.get(context.getAutowireCapableBeanFactory())){
+//                Reflections reflections = new Reflections(basePackage, new SubTypesScanner(false));
+//                reflections.getSubTypesOf(Object.class)
+//                        .forEach(this::processClass);
+//            }
+//
+//        }
+//        catch (Exception e){
+//            System.out.println("Exception while scanning package for classes :: "+ e.getMessage());
+//        }
+//    }
 }
